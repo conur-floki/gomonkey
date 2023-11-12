@@ -2,19 +2,26 @@ package lexer
 
 import "github.com/conur-floki/gomonkey/token"
 
+//position -> position in input string (points to current char)
+//readPosition -> current reading position in input (after curret char)
+//ch -> current char under examination to support unicode this should be rune type
 type Lexer struct {
 	input        string
-	position     int  //current position in input string (points to current char)
-	readPosition int  //current reading position in input (after curret char)
-	ch           byte //current char under examination
+	position     int
+	readPosition int
+	ch           byte
 }
 
+// Generate a new lexer
 func New(input string) *Lexer {
 	l := &Lexer{input: input}
 	l.readChar()
 	return l
 }
 
+// Read a single character and set the next position
+// this only supports ascci characters not full Unicode range
+// to support Unicode ch must be rune type and change the way the character is read
 func (l *Lexer) readChar() {
 	if l.readPosition >= len(l.input) {
 		l.ch = 0
@@ -25,6 +32,8 @@ func (l *Lexer) readChar() {
 	l.readPosition += 1
 }
 
+// Reads a single character and sets the next position
+// return a token depending on which character it is
 func (l *Lexer) NextToken() token.Token {
 	var tok token.Token
 
@@ -91,8 +100,24 @@ func (l *Lexer) NextToken() token.Token {
 	return tok
 }
 
+// Return the token
 func newToken(tokenType token.TokenType, ch byte) token.Token {
 	return token.Token{Type: tokenType, Literal: string(ch)}
+}
+
+// Validate if the char is letter
+func isLetter(ch byte) bool {
+	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
+}
+
+func isDigit(ch byte) bool {
+	return '0' <= ch && ch <= '9'
+}
+
+func (l *Lexer) skipWhitespace() {
+	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
+		l.readChar()
+	}
 }
 
 func (l *Lexer) readIdentifier() string {
@@ -103,26 +128,12 @@ func (l *Lexer) readIdentifier() string {
 	return l.input[position:l.position]
 }
 
-func isLetter(ch byte) bool {
-	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
-}
-
-func (l *Lexer) skipWhitespace() {
-	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
-		l.readChar()
-	}
-}
-
 func (l *Lexer) readNumber() string {
 	position := l.position
 	for isDigit(l.ch) {
 		l.readChar()
 	}
 	return l.input[position:l.position]
-}
-
-func isDigit(ch byte) bool {
-	return '0' <= ch && ch <= '9'
 }
 
 func (l *Lexer) peekChar() byte {
